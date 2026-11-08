@@ -1,0 +1,14 @@
+name: orders
+version: 1.0.0
+compatibility: full
+fields:
+  - name: order_id
+    type: string
+    required: true
+  - name: amount
+    type: number
+    required: true
+  - name: status
+    type: string
+    required: true
+    enum: [placed, shipped, delivered]
