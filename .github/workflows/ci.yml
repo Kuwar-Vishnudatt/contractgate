@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: go test
+        run: go test ./... -race -count=1
+
+  contract-gate-self-check:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: build contractgate
+        run: go build -o bin/contractgate ./cmd/contractgate
+      - name: expect v1 -> v2-compatible to PASS
+        run: ./bin/contractgate check -old contracts/orders/v1.yaml -new contracts/orders/v2-compatible.yaml
+      - name: expect v1 -> v2-breaking to FAIL (proves the gate actually blocks)
+        run: |
+          if ./bin/contractgate check -old contracts/orders/v1.yaml -new contracts/orders/v2-breaking.yaml; then
+            echo "::error::expected the breaking contract change to be blocked, but the gate passed it"
+            exit 1
+          fi
+          echo "gate correctly blocked the breaking change"
